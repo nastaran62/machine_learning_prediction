@@ -1,0 +1,9 @@
+# Python
+__pycache__
+venv
+env
+.pytest_cache
+*.eeg-info
+*.pyc
+
+.vscode

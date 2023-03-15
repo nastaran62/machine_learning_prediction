@@ -1,0 +1,24 @@
+Server must accept POST requests.
+Should return:
+200, Headers({ "Content-Type": "application/json", "Accept": "application/json" })
+With a JSON in the body.
+
+Run the server on Laptop.
+
+For port forwarding, on Laptop, run:
+
+ssh -p 9827 -N -R 127.0.0.1:9881:127.0.0.1:9881 root@nastaran-saffar.me
+
+
+
+NGINX configs:
+  location /ibm-webhook/ {
+    proxy_pass http://127.0.0.1:9881/;
+  }
+(Add this to the 'server' section that istens on 443)
+
+The Curl example:
+curl -X POST https://nastaran-saffar.me/ibm-webhook/
+
+(Note that it must be HTTPS)
+

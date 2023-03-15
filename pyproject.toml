@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "machine_learning"
+version = "1.1.1"
+description = "Web base data processing for https://octopus-sensing.nastaran-saffar.me"
+authors = ["Aidin Gharibnavaz <aidin@aidinhut.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.8,<3.11"
+numpy = "^1.21.0"
+keras = "*"
+tensorflow = "^2.9.1"
+opencv-python = "^4.6.0"
+sklearn = "^0.0"
+pandas = "^1.4.2"
+matplotlib = "^3.5.2"
+mne = "^1.0.3"
+octopus-sensing-processing = {path = "../octopus-sensing-processing"}
+neurokit2 = "^0.2.3"
+heartpy = "^1.2.7"
+PyWavelets = "^1.4.1"
+
+
+[tool.autopep8]
+max_line_length = 100
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

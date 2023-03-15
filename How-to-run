@@ -1,0 +1,15 @@
+open three terminal
+
+first: /media/nastaran/HDD/projects/octopus-examples
+run: pipenv run python processing_test.py 
+
+second: /media/nastaran/HDD/projects/machine_learning_prediction
+run: PYTHONPATH=. poetry run octopus-sensing-processing -t 3 -d camera -e 0.0.0.0:9333 -m predict -f predict
+or PYTHONPATH=. poetry run octopus-sensing-processing -t 3 -d camera -s http://127.0.0.1:9332/ -m predict -f predict
+poetry update if octopus-sensing-processing is changed
+
+
+third: /media/nastaran/HDD/projects/octopus-sensing-processing
+run: poetry run python octopus_sensing_processing/test_result.py
+
+		
