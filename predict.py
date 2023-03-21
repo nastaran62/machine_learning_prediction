@@ -250,25 +250,56 @@ def predict(data):
     face = None
 
     if "eeg" in data:
-        eeg_prediction = eeg_predict_process.out_queue.get()
+        try:
+            eeg_prediction = eeg_predict_process.out_queue.get()
+
+        except Exception as error:
+            eeg_prediction = {"arousal": 0,
+                              "valence": 0,
+                              "emotion": "Neutral"}
+            print("eeg prediction error: ", error)
         eeg = {"prediction": eeg_prediction,
-               "arousal_weight":1,
+               "arousal_weight": 1,
                "valence_weight": 1}
+
+
     if "gsr" in data:
-        gsr_prediction = gsr_predict_process.out_queue.get()
+        try:
+            gsr_prediction = gsr_predict_process.out_queue.get()
+
+        except Exception as error:
+            gsr_prediction = {"arousal": 0,
+                              "valence": 0,
+                              "emotion": "Neutral"}
+            print("gsr prediction error: ", error)
         gsr = {"prediction": gsr_prediction,
-               "arousal_weight":2,
+               "arousal_weight": 2,
                "valence_weight": 1}
+
     if "ppg" in data:
-        ppg_prediction = ppg_predict_process.out_queue.get()
+        try:
+            ppg_prediction = ppg_predict_process.out_queue.get()
+
+        except Exception as error:
+            ppg_prediction = {"arousal": 0,
+                              "valence": 0,
+                              "emotion": "Neutral"}
+            print("ppg prediction error: ", error)
         ppg = {"prediction": ppg_prediction,
-               "arousal_weight":2,
+               "arousal_weight": 2,
                "valence_weight": 1}
     if "camera" in data:
-        camera_prediction = face_predict_process.out_queue.get()
+        try:
+            camera_prediction = face_predict_process.out_queue.get()
+
+        except Exception as error:
+            camera_prediction = {"arousal": 0,
+                                 "valence": 0,
+                                 "emotion": "Neutral"}
+            print("ppg prediction error: ", error)
         face = {"prediction": camera_prediction,
-                "arousal_weight":1,
-                "valence_weight": 2}
+               "arousal_weight": 1,
+               "valence_weight": 2}
 
     fusion_prediction = decision_fusion(eeg=eeg,
                                         gsr=gsr,   
