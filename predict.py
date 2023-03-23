@@ -1,5 +1,6 @@
 import pickle
 import sys
+from datetime import datetime
 sys.path.insert(0, '../')
 import numpy as np
 from keras.models import load_model
@@ -140,22 +141,32 @@ def predict_face(data, frame_rate=30):
     
     return ""
 '''
+
 EMOTIONS = ["anger", "disgust", "fear", "happiness", "neutral", "sadness", "surprise"]
-facial_expression_model = load_model("models/face/model-1570411054.h5")
-def predict_face(data, frame_rate=30):
+
+def load_face_model():
+    return load_model("models/face/model-1570411054.h5")
+   
+def predict_face(data, frame_rate=30, model=None):
+    print("start predict face")
+
+    facial_expression_model = model
+    if not facial_expression_model:
+        raise RuntimeError('predict_face: The model is not valid!')
+        
     majority_emotion_list = [0, 0, 0, 0, 0, 0, 0]
     faces = face_preprocessing.yolo_face_detection(data, 48, 48)
     for face in faces:
         test_set = np.array([face])
         predicted_values = facial_expression_model.predict(test_set/255, verbose=1)
         label = np.argmax(predicted_values, axis=1)
-        print(predicted_values)
-        print("label", label, EMOTIONS[label[0]])
         majority_emotion_list[label[0]] += 1
+
     majority_emotion = np.argmax(np.array(majority_emotion_list))
     if len(data) != 0:
         print("emotion", EMOTIONS[majority_emotion])
     emotion = EMOTIONS[majority_emotion]
+
     if emotion == "neutral":
         return {"arousal": 0,
                 "valence": 0,
@@ -191,15 +202,23 @@ def predict_face(data, frame_rate=30):
 
 
 class PredictProcess(multiprocessing.Process):
-    def __init__(self, func, in_queue, out_queue):
+    def __init__(self, func, in_queue, out_queue, model_loader_func=None):
         super().__init__()
         self.func = func
         self.in_queue = in_queue
         self.out_queue = out_queue
+        self._model_loader_func = model_loader_func
     
     def run(self):
+        model = None
+        if self._model_loader_func:
+            model = self._model_loader_func()
+            
         while True:
             (args, kwargs) = self.in_queue.get()
+            if model:
+                kwargs['model'] = model
+
             result = self.func(*args, **kwargs)
             self.out_queue.put(result)
 
@@ -210,35 +229,47 @@ ppg_predict_process = PredictProcess(predict_ppg, multiprocessing.Queue(), multi
 ppg_predict_process.start()
 gsr_predict_process = PredictProcess(predict_gsr, multiprocessing.Queue(), multiprocessing.Queue())
 gsr_predict_process.start()
-face_predict_process = PredictProcess(predict_face, multiprocessing.Queue(), multiprocessing.Queue())
+face_predict_process = PredictProcess(predict_face, multiprocessing.Queue(), multiprocessing.Queue(), load_face_model)
 face_predict_process.start()
 
 def predict(data):
     print(data.keys)
 
+    is_eeg_available = False
+    is_ppg_available = False
+    is_gsr_available = False
+    is_camera_available = False
+
     if "eeg" in data: 
         eeg = data["eeg"]["data"]
-        eeg_sampling_rate = data["eeg"]["sampling_rate"]
-        eeg_channels = data["eeg"]["channels"]
-        eeg_predict_process.in_queue.put(((eeg,), {"sampling_rate":eeg_sampling_rate,
-                                                  "channels":eeg_channels}))
-
+        if len(eeg) > 0:
+            eeg_sampling_rate = data["eeg"]["sampling_rate"]
+            eeg_channels = data["eeg"]["channels"]
+            eeg_predict_process.in_queue.put(((eeg,), {"sampling_rate":eeg_sampling_rate,
+                                                      "channels":eeg_channels}))
+            is_eeg_available = True
+            
     if "ppg" in data:
         ppg = data["ppg"]["data"]
-        ppg_sampling_rate = data["ppg"]["sampling_rate"]
-        ppg_predict_process.in_queue.put(((ppg,), {"sampling_rate":ppg_sampling_rate}))
-    
+        if len(ppg) > 0:
+            ppg_sampling_rate = data["ppg"]["sampling_rate"]
+            ppg_predict_process.in_queue.put(((ppg,), {"sampling_rate":ppg_sampling_rate})) 
+            is_ppg_available = True
     
     if "gsr" in data:
-        gsr = data["gsr"]["data"]
-        gsr_sampling_rate = data["gsr"]["sampling_rate"]
-        gsr_predict_process.in_queue.put(((gsr,), {"sampling_rate":gsr_sampling_rate}))
-
+        if len(gsr) > 0:
+            gsr = data["gsr"]["data"]
+            gsr_sampling_rate = data["gsr"]["sampling_rate"]
+            gsr_predict_process.in_queue.put(((gsr,), {"sampling_rate":gsr_sampling_rate}))
+            is_gsr_available = True
     
     if "camera" in data:
         camera = data["camera"]["data"]
-        camera_frame_rate = data["camera"]["frame_rate"]
-        face_predict_process.in_queue.put(((camera,), {"frame_rate":camera_frame_rate}))
+        if len(camera) > 0:
+            camera_frame_rate = data["camera"]["frame_rate"]
+            print(datetime.now(), "main process: putting in camera queue: len(data)=", len(camera))
+            face_predict_process.in_queue.put(((camera,), {"frame_rate":camera_frame_rate}))
+            is_camera_available = True
     
     eeg_prediction = None
     ppg_prediction = None
@@ -249,7 +280,7 @@ def predict(data):
     ppg = None
     face = None
 
-    if "eeg" in data:
+    if is_eeg_available is True:
         try:
             eeg_prediction = eeg_predict_process.out_queue.get()
 
@@ -263,7 +294,7 @@ def predict(data):
                "valence_weight": 1}
 
 
-    if "gsr" in data:
+    if is_gsr_available is True:
         try:
             gsr_prediction = gsr_predict_process.out_queue.get()
 
@@ -276,7 +307,7 @@ def predict(data):
                "arousal_weight": 2,
                "valence_weight": 1}
 
-    if "ppg" in data:
+    if is_ppg_available is True:
         try:
             ppg_prediction = ppg_predict_process.out_queue.get()
 
@@ -288,15 +319,17 @@ def predict(data):
         ppg = {"prediction": ppg_prediction,
                "arousal_weight": 2,
                "valence_weight": 1}
-    if "camera" in data:
+    if is_camera_available is True:
         try:
+            print(datetime.now(), "main process: waiting for camera result")
             camera_prediction = face_predict_process.out_queue.get()
+            print(datetime.now(), "main process: camera result=", camera_prediction)
 
         except Exception as error:
             camera_prediction = {"arousal": 0,
                                  "valence": 0,
                                  "emotion": "Neutral"}
-            print("ppg prediction error: ", error)
+            print("camera prediction error: ", error)
         face = {"prediction": camera_prediction,
                "arousal_weight": 1,
                "valence_weight": 2}
@@ -320,8 +353,6 @@ def decision_fusion(eeg=None, ppg=None, gsr=None, face=None):
     total_arousal = 0
     total_valence = 0
     emotion = None
-    print(eeg)
-    print(face)
     if eeg is not None:
         arousal_score += eeg["prediction"]["arousal"] * eeg["arousal_weight"]
         total_arousal += eeg["arousal_weight"]
@@ -355,7 +386,6 @@ def decision_fusion(eeg=None, ppg=None, gsr=None, face=None):
     elif valence_score < 0:
         valence = -1
 
-    print("&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&")
     print(arousal, valence, emotion)
     return {"arousal": arousal,
             "valence": valence,
