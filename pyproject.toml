@@ -8,16 +8,16 @@ authors = ["Aidin Gharibnavaz <aidin@aidinhut.com>"]
 python = ">=3.8,<3.11"
 numpy = "^1.21.0"
 keras = "*"
-tensorflow = "^2.9.1"
+tensorflow = "2.9.1"
 opencv-python = "^4.6.0"
-sklearn = "^0.0"
+scikit-learn = "1.2.1"
 pandas = "^1.4.2"
 matplotlib = "^3.5.2"
-mne = "^1.0.3"
-octopus-sensing-processing = {path = "../octopus-sensing-processing"}
-neurokit2 = "^0.2.3"
-heartpy = "^1.2.7"
-PyWavelets = "^1.4.1"
+mne = "1.0.3"
+octopus-sensing-processing = "1.0.1"
+neurokit2 = "0.2.3"
+heartpy = "1.2.7"
+PyWavelets = "1.4.1"
 
 
 [tool.autopep8]

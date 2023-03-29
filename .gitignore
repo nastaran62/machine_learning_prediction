@@ -5,7 +5,9 @@ env
 .pytest_cache
 *.eeg-info
 *.pyc
+*.lock
 
 .vscode
+
 
 models

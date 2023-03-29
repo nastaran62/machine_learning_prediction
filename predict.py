@@ -36,30 +36,34 @@ def ml_prediction(features, data_type):
             "emotion": None}
 
 def predict_eeg(data, sampling_rate=128, channels=None, method="feature_based"):
-    preprocessing = \
-        eeg_preprocessing.EegPreprocessing(np.array(data),
-                                           channel_names=channels,
-                                           sampling_rate=sampling_rate)
-    preprocessing.filter_data()
-    preprocessing.rereferencing(referencing_value='average')
-    # If we know bad channels, we should call this method and pass the list of bad channels, otherwise
-    # should not call this method
-    #preprocessing.interpolate_bad_channels(bad_channels=["Fp1"]) 
-    preprocessed_data = preprocessing.get_data()
+    try:
+        preprocessing = \
+	    eeg_preprocessing.EegPreprocessing(np.array(data),
+		                               channel_names=channels,
+		                               sampling_rate=sampling_rate)
+        preprocessing.filter_data()
+        preprocessing.rereferencing(referencing_value='average')
+        # If we know bad channels, we should call this method and pass the list of bad channels, otherwise
+        # should not call this method
+        #preprocessing.interpolate_bad_channels(bad_channels=["Fp1"]) 
+        preprocessed_data = preprocessing.get_data()
 
-    if method == "lstm":
-        return None
-    else:
-        feature_extractor = eeg_feature_extractor.EegFeatures(preprocessed_data, sampling_rate)
-        features = feature_extractor.get_total_power_bands()
+        if method == "lstm":
+	    return None
+        else:
+	    feature_extractor = eeg_feature_extractor.EegFeatures(preprocessed_data, sampling_rate)
+	    features = feature_extractor.get_total_power_bands()
 
-        return ml_prediction(features, "eeg")
+	    return ml_prediction(features, "eeg")
+    except:
+        return {"arousal": 0),
+                "valence": 0,
+                "emotion": None}        
 
 def predict_ppg(data, sampling_rate=128, method = "feature_based"):   
     # data type is list
     data = np.array(data)
     if len(data) < sampling_rate*20:
-        print(len(data))
         return {"arousal": 0,
                 "valence": 0,
                 "emotion": None}
@@ -85,7 +89,6 @@ def predict_ppg(data, sampling_rate=128, method = "feature_based"):
 
 def predict_gsr(data, sampling_rate=128, method = "feature_based"):
     if len(data) < sampling_rate*20:
-        print(len(data))
         return {"arousal": 0,
                 "valence": 0,
                 "emotion": None}
@@ -257,8 +260,8 @@ def predict(data):
             is_ppg_available = True
     
     if "gsr" in data:
+        gsr = data["gsr"]["data"]
         if len(gsr) > 0:
-            gsr = data["gsr"]["data"]
             gsr_sampling_rate = data["gsr"]["sampling_rate"]
             gsr_predict_process.in_queue.put(((gsr,), {"sampling_rate":gsr_sampling_rate}))
             is_gsr_available = True
@@ -267,7 +270,6 @@ def predict(data):
         camera = data["camera"]["data"]
         if len(camera) > 0:
             camera_frame_rate = data["camera"]["frame_rate"]
-            print(datetime.now(), "main process: putting in camera queue: len(data)=", len(camera))
             face_predict_process.in_queue.put(((camera,), {"frame_rate":camera_frame_rate}))
             is_camera_available = True
     
@@ -331,8 +333,8 @@ def predict(data):
                                  "emotion": "Neutral"}
             print("camera prediction error: ", error)
         face = {"prediction": camera_prediction,
-               "arousal_weight": 1,
-               "valence_weight": 2}
+                "arousal_weight": 1,
+                "valence_weight": 2}
 
     fusion_prediction = decision_fusion(eeg=eeg,
                                         gsr=gsr,   
@@ -386,7 +388,6 @@ def decision_fusion(eeg=None, ppg=None, gsr=None, face=None):
     elif valence_score < 0:
         valence = -1
 
-    print(arousal, valence, emotion)
     return {"arousal": arousal,
             "valence": valence,
             "emotion": emotion}
