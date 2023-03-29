@@ -38,9 +38,9 @@ def ml_prediction(features, data_type):
 def predict_eeg(data, sampling_rate=128, channels=None, method="feature_based"):
     try:
         preprocessing = \
-	    eeg_preprocessing.EegPreprocessing(np.array(data),
-		                               channel_names=channels,
-		                               sampling_rate=sampling_rate)
+        eeg_preprocessing.EegPreprocessing(np.array(data),
+                                        channel_names=channels,
+                                        sampling_rate=sampling_rate)
         preprocessing.filter_data()
         preprocessing.rereferencing(referencing_value='average')
         # If we know bad channels, we should call this method and pass the list of bad channels, otherwise
@@ -49,66 +49,77 @@ def predict_eeg(data, sampling_rate=128, channels=None, method="feature_based"):
         preprocessed_data = preprocessing.get_data()
 
         if method == "lstm":
-	    return None
+            return None
         else:
-	    feature_extractor = eeg_feature_extractor.EegFeatures(preprocessed_data, sampling_rate)
-	    features = feature_extractor.get_total_power_bands()
+            feature_extractor = eeg_feature_extractor.EegFeatures(preprocessed_data, sampling_rate)
+            features = feature_extractor.get_total_power_bands()
 
-	    return ml_prediction(features, "eeg")
+            return ml_prediction(features, "eeg")
     except:
-        return {"arousal": 0),
+        return {"arousal": 0,
                 "valence": 0,
-                "emotion": None}        
+                "emotion": None}  
+      
 
-def predict_ppg(data, sampling_rate=128, method = "feature_based"):   
-    # data type is list
-    data = np.array(data)
-    if len(data) < sampling_rate*20:
+def predict_ppg(data, sampling_rate=128, method = "feature_based"): 
+    try:  
+        # data type is list
+        data = np.array(data)
+        if len(data) < sampling_rate*20:
+            return {"arousal": 0,
+                    "valence": 0,
+                    "emotion": None}
+        # data type is list
+        data = np.array(data)
+        #display_signal(data)
+        preprocessing = \
+            ppg_preprocessing.PpgPreprocessing(data,
+                                            sampling_rate=sampling_rate)
+        # neurokit method
+        preprocessing.neurokit_filtering()
+        preprocessing.filtering()
+
+        # If we don't want to do baseline normalization and just remove baseline should pass False to normalization parameter
+        #preprocessing.baseline_normalization(baseline_duration=3, normalization=True)
+        preprocessed_data = preprocessing.get_data()  
+
+        if method == "lstm":
+            return None
+        else:
+            features = ppg_feature_extractor.get_feature_vector(preprocessed_data, sampling_rate)
+            return ml_prediction(features, "ppg")
+    except:
         return {"arousal": 0,
                 "valence": 0,
                 "emotion": None}
-    # data type is list
-    data = np.array(data)
-    #display_signal(data)
-    preprocessing = \
-        ppg_preprocessing.PpgPreprocessing(data,
-                                           sampling_rate=sampling_rate)
-    # neurokit method
-    preprocessing.neurokit_filtering()
-    preprocessing.filtering()
-
-    # If we don't want to do baseline normalization and just remove baseline should pass False to normalization parameter
-    #preprocessing.baseline_normalization(baseline_duration=3, normalization=True)
-    preprocessed_data = preprocessing.get_data()  
-
-    if method == "lstm":
-        return None
-    else:
-        features = ppg_feature_extractor.get_feature_vector(preprocessed_data, sampling_rate)
-        return ml_prediction(features, "ppg")
 
 def predict_gsr(data, sampling_rate=128, method = "feature_based"):
-    if len(data) < sampling_rate*20:
+    try:
+        if len(data) < sampling_rate*20:
+            return {"arousal": 0,
+                    "valence": 0,
+                    "emotion": None}
+        # data type is list
+        data = np.array(data)   
+        #display_signal(data)
+        preprocessing = \
+            gsr_preprocessing.GsrPreprocessing(data,
+                                            sampling_rate=sampling_rate)
+        # neurokit method
+        preprocessing.gsr_noise_cancelation()
+        # If we don't want to do baseline normalization and just remove baseline should pass False to normalization parameter
+        #preprocessing.baseline_normalization(baseline_duration=3, normalization=False)
+        preprocessed_data = preprocessing.get_data()
+    
+        if method == "lstm":
+            return None
+        else:
+            features = gsr_feature_extractor.GsrFeatureExtraction(preprocessed_data, sampling_rate).get_feature_vector()
+            return ml_prediction(features, "gsr")
+    except:
         return {"arousal": 0,
                 "valence": 0,
                 "emotion": None}
-    # data type is list
-    data = np.array(data)   
-    #display_signal(data)
-    preprocessing = \
-        gsr_preprocessing.GsrPreprocessing(data,
-                                           sampling_rate=sampling_rate)
-    # neurokit method
-    preprocessing.gsr_noise_cancelation()
-    # If we don't want to do baseline normalization and just remove baseline should pass False to normalization parameter
-    #preprocessing.baseline_normalization(baseline_duration=3, normalization=False)
-    preprocessed_data = preprocessing.get_data()
- 
-    if method == "lstm":
-        return None
-    else:
-        features = gsr_feature_extractor.GsrFeatureExtraction(preprocessed_data, sampling_rate).get_feature_vector()
-        return ml_prediction(features, "gsr")
 
 '''
 EMOTIONS = ["anger", "disgust", "fear", "happiness", "neutral", "sadness", "surprise"]
