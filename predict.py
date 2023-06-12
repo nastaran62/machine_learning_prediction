@@ -17,6 +17,13 @@ import processing.feature_extraction.gsr as gsr_feature_extractor
 import processing.feature_extraction.ppg as ppg_feature_extractor
 
 
+def convert(value):
+    if value == 1:
+        return 1
+    else:
+        return -1
+ 
+
 def ml_prediction(features, data_type):
     #std, mean = pickle.load("models/{0}/scaling_factors.pickle".format(data_type))
     #features = (features - mean) / std
@@ -247,8 +254,6 @@ face_predict_process = PredictProcess(predict_face, multiprocessing.Queue(), mul
 face_predict_process.start()
 
 def predict(data):
-    print(data.keys)
-
     is_eeg_available = False
     is_ppg_available = False
     is_gsr_available = False
@@ -302,6 +307,7 @@ def predict(data):
                               "valence": 0,
                               "emotion": "Neutral"}
             print("eeg prediction error: ", error)
+
         eeg = {"prediction": eeg_prediction,
                "arousal_weight": 1,
                "valence_weight": 1}
@@ -367,19 +373,19 @@ def decision_fusion(eeg=None, ppg=None, gsr=None, face=None):
     total_valence = 0
     emotion = None
     if eeg is not None:
-        arousal_score += eeg["prediction"]["arousal"] * eeg["arousal_weight"]
+        arousal_score += convert(eeg["prediction"]["arousal"]) * eeg["arousal_weight"]
         total_arousal += eeg["arousal_weight"]
-        valence_score += eeg["prediction"]["valence"] * eeg["valence_weight"]
+        valence_score += convert(eeg["prediction"]["valence"]) * eeg["valence_weight"]
         total_valence += eeg["valence_weight"]
     if ppg is not None:
-        arousal_score += ppg["prediction"]["arousal"] * ppg["arousal_weight"]
+        arousal_score += convert(ppg["prediction"]["arousal"]) * ppg["arousal_weight"]
         total_arousal += ppg["arousal_weight"]
-        valence_score += ppg["prediction"]["valence"] * ppg["valence_weight"]
+        valence_score += convert(ppg["prediction"]["valence"]) * ppg["valence_weight"]
         total_valence += ppg["valence_weight"]
     if gsr is not None:
-        arousal_score += gsr["prediction"]["arousal"] * gsr["arousal_weight"]
+        arousal_score += convert(gsr["prediction"]["arousal"]) * gsr["arousal_weight"]
         total_arousal += gsr["arousal_weight"]
-        valence_score += gsr["prediction"]["valence"] * gsr["valence_weight"]
+        valence_score += convert(gsr["prediction"]["valence"]) * gsr["valence_weight"]
         total_valence += gsr["valence_weight"]
     if face is not None:
         arousal_score += face["prediction"]["arousal"] * face["arousal_weight"]
